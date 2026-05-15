@@ -104,29 +104,34 @@ namespace HotKeyHelper
         private void ManageAutostart(bool enable)
         {
             string startupFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-            string shortcutPath = Path.Combine(startupFolderPath, "HotKeyHelper.url");
+            string shortcutPathLnk = Path.Combine(startupFolderPath, "HotKeyHelper.lnk");
+            string shortcutPathUrl = Path.Combine(startupFolderPath, "HotKeyHelper.url");
 
             if (enable)
             {
-                if (!File.Exists(shortcutPath))
+                if (File.Exists(shortcutPathUrl)) File.Delete(shortcutPathUrl);
+
+                if (!File.Exists(shortcutPathLnk))
                 {
                     string exePath = Application.ExecutablePath;
-                    using (StreamWriter writer = new StreamWriter(shortcutPath))
+                    Type? t = Type.GetTypeFromProgID("WScript.Shell");
+                    if (t != null)
                     {
-                        writer.WriteLine("[InternetShortcut]");
-                        writer.WriteLine("URL=file:///" + exePath.Replace('\\', '/'));
-                        writer.WriteLine("IconIndex=0");
-                        string icon = exePath.Replace('\\', '/');
-                        writer.WriteLine("IconFile=" + icon);
+                        dynamic? shell = Activator.CreateInstance(t);
+                        if (shell != null)
+                        {
+                            var shortcut = shell.CreateShortcut(shortcutPathLnk);
+                            shortcut.TargetPath = exePath;
+                            shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
+                            shortcut.Save();
+                        }
                     }
                 }
             }
             else
             {
-                if (File.Exists(shortcutPath))
-                {
-                    File.Delete(shortcutPath);
-                }
+                if (File.Exists(shortcutPathLnk)) File.Delete(shortcutPathLnk);
+                if (File.Exists(shortcutPathUrl)) File.Delete(shortcutPathUrl);
             }
         }
 
