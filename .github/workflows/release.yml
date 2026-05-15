@@ -1,0 +1,38 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Ворклоу запустится, если вы запушите тег, начинающийся на 'v' (например, v1.0.0)
+
+jobs:
+  build-and-release:
+    name: Build and Create Release
+    runs-on: windows-latest # Windows Forms собирается на Windows
+
+    permissions:
+      contents: write # Права для создания релиза
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish App
+        # Собираем как один независимый exe-файл, не требующий установки .NET на ПК пользователя
+        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish_output
+
+      - name: Create Zip Archive
+        run: Compress-Archive -Path ./publish_output/* -DestinationPath HotKeyHelper-win-x64.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: HotKeyHelper-win-x64.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
