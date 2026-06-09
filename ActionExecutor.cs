@@ -16,56 +16,38 @@ namespace HotKeyHelper
                     case "RunProgram":
                         if (!string.IsNullOrWhiteSpace(action.TargetPath))
                         {
-                            IntPtr existingWnd = IntPtr.Zero;
-                            Process? existingProcess = FindRunningProcess(action.TargetPath);
-                            if (existingProcess != null)
+                            var startInfo = new ProcessStartInfo
                             {
-                                existingWnd = existingProcess.MainWindowHandle;
-                                if (existingWnd == IntPtr.Zero)
-                                {
-                                    existingWnd = FindWindowForProcess(existingProcess.Id);
-                                }
-                            }
-
-                            if (existingWnd != IntPtr.Zero)
+                                FileName = action.TargetPath,
+                                UseShellExecute = true,
+                                Arguments = action.Arguments ?? string.Empty
+                            };
+                            var process = Process.Start(startInfo);
+                            
+                            if (process != null)
                             {
-                                ForceForegroundWindow(existingWnd);
-                            }
-                            else
-                            {
-                                var startInfo = new ProcessStartInfo
+                                System.Threading.Tasks.Task.Run(() =>
                                 {
-                                    FileName = action.TargetPath,
-                                    UseShellExecute = true,
-                                    Arguments = action.Arguments ?? string.Empty
-                                };
-                                var process = Process.Start(startInfo);
-                                
-                                if (process != null)
-                                {
-                                    System.Threading.Tasks.Task.Run(() =>
+                                    try
                                     {
-                                        try
+                                        // Wait up to 5 seconds for the process to be ready for user input
+                                        process.WaitForInputIdle(5000);
+                                        System.Threading.Thread.Sleep(200); // Brief delay for window initialization
+                                        
+                                        process.Refresh(); // Refresh process properties to get MainWindowHandle
+                                        IntPtr targetWnd = process.MainWindowHandle;
+                                        if (targetWnd == IntPtr.Zero)
                                         {
-                                            // Wait up to 5 seconds for the process to be ready for user input
-                                            process.WaitForInputIdle(5000);
-                                            System.Threading.Thread.Sleep(200); // Brief delay for window initialization
-                                            
-                                            process.Refresh(); // Refresh process properties to get MainWindowHandle
-                                            IntPtr targetWnd = process.MainWindowHandle;
-                                            if (targetWnd == IntPtr.Zero)
-                                            {
-                                                targetWnd = FindWindowForProcess(process.Id);
-                                            }
-
-                                            if (targetWnd != IntPtr.Zero)
-                                            {
-                                                ForceForegroundWindow(targetWnd);
-                                            }
+                                            targetWnd = FindWindowForProcess(process.Id);
                                         }
-                                        catch { /* Process might not have a GUI, or exited, ignore */ }
-                                    });
-                                }
+
+                                        if (targetWnd != IntPtr.Zero)
+                                        {
+                                            ForceForegroundWindow(targetWnd);
+                                        }
+                                    }
+                                    catch { /* Process might not have a GUI, or exited, ignore */ }
+                                });
                             }
                         }
                         break;
