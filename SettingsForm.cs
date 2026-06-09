@@ -161,7 +161,6 @@ namespace HotKeyHelper
             // Row 1: Name and Hotkey
             var lblName = new Label { Text = "Имя:", Location = new Point(col1, yOffset), AutoSize = true };
             var txtName = new TextBox { Text = action.Name, Location = new Point(col1, yOffset + 25), Width = 230, BackColor = Color.FromArgb(30, 30, 30), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-            txtName.TextChanged += (s, e) => action.Name = txtName.Text;
 
             var lblKey = new Label { Text = "Горячая клавиша:", Location = new Point(col2, yOffset), AutoSize = true };
             var btnKey = new Button { Text = string.IsNullOrEmpty(action.KeyCombination) ? "[Назначить]" : action.KeyCombination, Location = new Point(col2, yOffset + 25), Width = 230, Height = 27, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(80, 80, 85), Cursor = Cursors.Hand };
@@ -207,7 +206,6 @@ namespace HotKeyHelper
 
             var lblPath = new Label { Text = "Путь/Команда:", Location = new Point(col2, yOffset), AutoSize = true };
             var txtPath = new TextBox { Text = action.TargetPath, Location = new Point(col2, yOffset + 25), Width = 190, BackColor = Color.FromArgb(30, 30, 30), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
-            txtPath.TextChanged += (s, e) => action.TargetPath = txtPath.Text;
 
             var btnBrowse = new Button { Text = "...", Location = new Point(col2 + 195, yOffset + 24), Width = 35, Height = 28, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(80, 80, 85), Cursor = Cursors.Hand };
             btnBrowse.Click += (s, e) => {
@@ -231,6 +229,89 @@ namespace HotKeyHelper
             var txtArgs = new TextBox { Text = action.Arguments, Location = new Point(col3, yOffset + 25), Width = card.Width - col3 - 20, BackColor = Color.FromArgb(30, 30, 30), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
             txtArgs.TextChanged += (s, e) => action.Arguments = txtArgs.Text;
 
+            // Name auto-generation templates logic
+            Func<string, string, string> getSuggestedName = (type, path) =>
+            {
+                switch (type)
+                {
+                    case "RunProgram":
+                        if (string.IsNullOrWhiteSpace(path)) return "Запуск программы";
+                        try
+                        {
+                            return $"Запустить {System.IO.Path.GetFileName(path)}";
+                        }
+                        catch { return "Запустить программу"; }
+                    case "OpenFolder":
+                        if (string.IsNullOrWhiteSpace(path)) return "Открыть папку";
+                        try
+                        {
+                            return $"Открыть {System.IO.Path.GetFileName(path)}";
+                        }
+                        catch { return "Открыть папку"; }
+                    case "CloseWindow":
+                        return "Закрыть активное окно";
+                    case "KillProcess":
+                        return "Завершить процесс окна";
+                    case "ToggleMaximize":
+                        return "Развернуть / Восстановить окно";
+                    case "MinimizeWindow":
+                        return "Свернуть окно";
+                    case "LockScreen":
+                        return "Заблокировать экран";
+                    case "VolumeUp":
+                        return "Громкость +";
+                    case "VolumeDown":
+                        return "Громкость -";
+                    case "VolumeMute":
+                        return "Звук: Вкл/Выкл";
+                    case "MediaPlayPause":
+                        return "Медиа: Пауза / Воспроизведение";
+                    default:
+                        return "Новое действие";
+                }
+            };
+
+            bool isCustomName = false;
+            if (!string.IsNullOrEmpty(action.Name) && action.Name != "Новое действие")
+            {
+                string currentSuggestion = getSuggestedName(action.ActionType, action.TargetPath);
+                if (action.Name != currentSuggestion)
+                {
+                    isCustomName = true;
+                }
+            }
+
+            Action updateName = () => {
+                if (isCustomName) return;
+                string type = action.ActionType;
+                string path = txtPath.Text;
+                string newName = getSuggestedName(type, path);
+                if (txtName.Text != newName)
+                {
+                    txtName.Text = newName;
+                    action.Name = newName;
+                }
+            };
+
+            txtName.TextChanged += (s, e) => {
+                action.Name = txtName.Text;
+                string currentSuggestion = getSuggestedName(action.ActionType, txtPath.Text);
+                if (txtName.Text != currentSuggestion && txtName.Focused)
+                {
+                    isCustomName = true;
+                }
+                else if (string.IsNullOrEmpty(txtName.Text))
+                {
+                    isCustomName = false; // Reset to auto if cleared
+                    updateName();
+                }
+            };
+
+            txtPath.TextChanged += (s, e) => {
+                action.TargetPath = txtPath.Text;
+                updateName();
+            };
+
             Action updateVisibility = () => {
                 var selected = cmbType.SelectedItem as ActionTypeItem;
                 if (selected != null) {
@@ -245,8 +326,17 @@ namespace HotKeyHelper
                 lblArgs.Visible = txtArgs.Visible = needsArgs;
             };
 
-            cmbType.SelectedIndexChanged += (s, e) => updateVisibility();
+            cmbType.SelectedIndexChanged += (s, e) => {
+                var selected = cmbType.SelectedItem as ActionTypeItem;
+                if (selected != null) {
+                    action.ActionType = selected.Id;
+                }
+                updateVisibility();
+                updateName();
+            };
+
             updateVisibility();
+            updateName();
 
             card.Controls.Add(lblName); card.Controls.Add(txtName);
             card.Controls.Add(lblKey); card.Controls.Add(btnKey);
