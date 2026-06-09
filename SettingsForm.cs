@@ -27,6 +27,22 @@ namespace HotKeyHelper
             _hook = hook;
             InitializeComponent();
             LoadActions();
+
+            // Set Form Icon
+            try
+            {
+                using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("HotKeyHelper.app_icon.png"))
+                {
+                    if (stream != null)
+                    {
+                        using (var bitmap = new Bitmap(stream))
+                        {
+                            this.Icon = Icon.FromHandle(bitmap.GetHicon());
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         private void InitializeComponent()

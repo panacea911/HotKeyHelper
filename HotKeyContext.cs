@@ -17,9 +17,28 @@ namespace HotKeyHelper
             _config = ConfigManager.LoadConfig();
 
             // Initialize Tray Icon
+            Icon? appIcon = null;
+            try
+            {
+                using (var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("HotKeyHelper.app_icon.png"))
+                {
+                    if (stream != null)
+                    {
+                        using (var bitmap = new Bitmap(stream))
+                        {
+                            appIcon = Icon.FromHandle(bitmap.GetHicon());
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load tray icon: {ex.Message}");
+            }
+
             _trayIcon = new NotifyIcon()
             {
-                Icon = SystemIcons.Application,
+                Icon = appIcon ?? SystemIcons.Application,
                 ContextMenuStrip = new ContextMenuStrip(),
                 Visible = true,
                 Text = "Менеджер горячих клавиш"
