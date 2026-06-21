@@ -22,17 +22,24 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Publish App
-        # Собираем легковесный exe-файл. Требует установленного .NET 8 на ПК пользователя.
-        run: dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish_output
+      - name: Publish App (x64)
+        run: dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish_output_x64
 
-      - name: Create Zip Archive
-        run: Compress-Archive -Path ./publish_output/* -DestinationPath HotKeyHelper-win-x64.zip
+      - name: Publish App (x86)
+        run: dotnet publish -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ./publish_output_x86
+
+      - name: Create Zip Archive (x64)
+        run: Compress-Archive -Path ./publish_output_x64/* -DestinationPath HotKeyHelper-win-x64.zip
+
+      - name: Create Zip Archive (x86)
+        run: Compress-Archive -Path ./publish_output_x86/* -DestinationPath HotKeyHelper-win-x86.zip
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: HotKeyHelper-win-x64.zip
+          files: |
+            HotKeyHelper-win-x64.zip
+            HotKeyHelper-win-x86.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

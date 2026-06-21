@@ -22,14 +22,26 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Publish App
-        run: dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish_output
+      - name: Publish App (x64)
+        run: dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish_output_x64
 
-      - name: Create Zip Archive
-        run: Compress-Archive -Path ./publish_output/* -DestinationPath HotKeyHelper-win-x64-test.zip
+      - name: Publish App (x86)
+        run: dotnet publish -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true -o ./publish_output_x86
 
-      - name: Upload Build Artifact
+      - name: Create Zip Archive (x64)
+        run: Compress-Archive -Path ./publish_output_x64/* -DestinationPath HotKeyHelper-win-x64-test.zip
+
+      - name: Create Zip Archive (x86)
+        run: Compress-Archive -Path ./publish_output_x86/* -DestinationPath HotKeyHelper-win-x86-test.zip
+
+      - name: Upload Build Artifact (x64)
         uses: actions/upload-artifact@v4
         with:
           name: HotKeyHelper-win-x64-test
           path: HotKeyHelper-win-x64-test.zip
+
+      - name: Upload Build Artifact (x86)
+        uses: actions/upload-artifact@v4
+        with:
+          name: HotKeyHelper-win-x86-test
+          path: HotKeyHelper-win-x86-test.zip
